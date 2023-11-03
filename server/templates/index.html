@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser OCR Extenstion</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Browser OCR Extension</h1>
+
+        <!-- Screenshot capture section -->
+        <button id="capture-button">Capture Screenshot</button>
+        <img id="screenshot-image" src="" alt="Captured Screenshot">
+
+        <!-- Selection area input fields -->
+        <input type="text" id="x-coordinate" placeholder="X Coordinate">
+        <input type="text" id="y-coordinate" placeholder="Y Coordinate">
+        <input type="text" id="width" placeholder="Width">
+        <input type="text" id="height" placeholder="Height">
+
+        <!-- OCR button and extracted text section -->
+        <button id="ocr-button">Perform OCR</button>
+        <div id="extracted-text"></div>
+    </div>
+
+    <!-- Add canvas for the selection overlay -->
+    <canvas id="selection-overlay"></canvas>
+
+
+    <script>
+        console.log('This is from popup.js');
+
+        let screenshotURL = null;
+        let selectedArea = { x: 0, y: 0, width: 0, height: 0 };
+
+        let isSelecting = false;
+        let startX, startY, endX, endY;
+
+        const captureButton = document.getElementById('capture-button');
+        const screenshotImage = document.getElementById('screenshot-image');
+        const xCoordinateInput = document.getElementById('x-coordinate');
+        const yCoordinateInput = document.getElementById('y-coordinate');
+        const widthInput = document.getElementById('width');
+        const heightInput = document.getElementById('height');
+        const ocrButton = document.getElementById('ocr-button');
+        const extractedText = document.getElementById('extracted-text');
+        const selectionOverlay = document.getElementById('selection-overlay');
+        const selectionOverlayContext = selectionOverlay.getContext('2d');
+
+        function displayScreenshot(screenshotURL) {
+            screenshotImage.src = screenshotURL;
+            clearSelection();
+        }
+
+        function clearSelection() {
+            selectionOverlayContext.clearRect(0, 0, selectionOverlay.width, selectionOverlay.height);
+            selectedArea = { x: 0, y: 0, width: 0, height: 0 };
+            updateInputFields();
+        }
+
+        function updateInputFields() {
+            xCoordinateInput.value = selectedArea.x;
+            yCoordinateInput.value = selectedArea.y;
+            widthInput.value = selectedArea.width;
+            heightInput.value = selectedArea.height;
+        }
+
+        function updateSelectedArea() {
+            if (isSelecting) {
+                const canvasRect = screenshotImage.getBoundingClientRect();
+                const x = Math.min(startX, endX) - canvasRect.left;
+                const y = Math.min(startY, endY) - canvasRect.top;
+                const width = Math.abs(endX - startX);
+                const height = Math.abs(endY - startY);
+
+                selectedArea = { x, y, width, height };
+                clearSelection();
+                drawSelectionOverlay(selectedArea);
+                updateInputFields();
+            }
+        }
+
+
+        captureButton.addEventListener('click', () => {
+            // Check if the extension is running in Chrome or Firefox
+            if (typeof chrome !== "undefined" && typeof chrome.tabs !== "undefined") {
+                // Running in Chrome
+                chrome.tabs.captureVisibleTab(null, { format: 'png' }, function(dataURL) {
+                    if (chrome.runtime.lastError) {
+                        // Handle any errors that occurred during the capture
+                        console.error(chrome.runtime.lastError);
+                    } else {
+                        screenshotURL = dataURL;
+                        displayScreenshot(screenshotURL);
+                        sendImageToServer(screenshotURL);
+                    }
+                });
+            } else if (typeof browser !== "undefined" && typeof browser.tabs !== "undefined") {
+                // Running in Firefox
+                browser.tabs.captureVisibleTab()
+                    .then(dataURL => {
+                        screenshotURL = dataURL;
+                        displayScreenshot(screenshotURL);
+                        sendImageToServer(screenshotURL);
+                    })
+                    .catch(error => {
+                        console.error(error);
+                    });
+            } else {
+                // Handle unsupported browsers or other environments
+                console.error("Unsupported browser");
+            }
+        });
+
+
+        screenshotImage.addEventListener('mousedown', (e) => {
+            isSelecting = true;
+            startX = e.clientX;
+            startY = e.clientY;
+        });
+
+        screenshotImage.addEventListener('mousemove', (e) => {
+            if (isSelecting) {
+                endX = e.clientX;
+                endY = e.clientY;
+                updateSelectedArea();
+            }
+        });
+
+        screenshotImage.addEventListener('mouseup', () => {
+            isSelecting = false;
+        });
+
+        function drawSelectionOverlay(area) {
+            selectionOverlayContext.strokeStyle = 'red';
+            selectionOverlayContext.lineWidth = 2;
+            selectionOverlayContext.strokeRect(area.x, area.y, area.width, area.height);
+        }
+
+        async function sendImageToServer(imageDataURL) {
+            if (!imageDataURL) {
+                console.error('No image data to send to the server.');
+                return;
+            }
+
+            const serverURL = 'http://localhost:8080/upload';
+            const selectedAreaData = {
+                x: selectedArea.x,
+                y: selectedArea.y,
+                width: selectedArea.width,
+                height: selectedArea.height,
+            };
+
+            try {
+                const response = await fetch(serverURL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: imageDataURL, area: selectedAreaData }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.text) {
+                        extractedText.textContent = data.text;
+                    } else {
+                        console.error('No text extracted from the server response.');
+                    }
+                } else {
+                    console.error('Server responded with an error:', response.status);
+                }
+            } catch (error) {
+                console.error('Error while sending data to the server:', error);
+            }
+        }
+    </script>    
+    
+
+</body>
+</html>

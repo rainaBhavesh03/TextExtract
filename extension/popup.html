@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser OCR Extension</title>
+    <link rel="stylesheet" type="text/css" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Browser OCR Extension</h1>
+
+        <!-- Screenshot capture section -->
+        <button id="capture-button">Capture Screenshot</button>
+        <div id="screenshotContainer">
+            <img id="screenshot-image" src="" alt="Captured Screenshot">
+            <div id="selected-area"></div>
+        </div>
+
+        <!-- Selection area input fields -->
+        <div class="coordinates">
+            <div class="value">
+                <h3>X-Coordinate</h3>
+                <input type="text" disabled id="x-coordinate">
+            </div>
+            <div class="value">
+                <h3>Y-Coordinate</h3>
+                <input type="text" disabled id="y-coordinate">
+            </div>
+            <div class="value">
+                <h3>Width</h3>
+                <input type="text" disabled id="width">
+            </div>
+            <div class="value">
+                <h3>Height</h3>
+                <input type="text" disabled id="height">
+            </div>
+        </div>
+
+        <button id="ocr-button">Perform OCR</button>
+        <div id="extracted-text">No text extracted yet!!</div>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>
