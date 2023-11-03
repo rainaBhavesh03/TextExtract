@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "My OCR Extension",
+    "name": "TextExtract",
     "version": "1.0",
     "description": "Capture screenshots and extract text using OCR.",
     "permissions": [
